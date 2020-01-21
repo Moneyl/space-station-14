@@ -29,13 +29,17 @@ namespace Content.Server.Explosions
             var mapManager = IoCManager.Resolve<IMapManager>();
             var robustRandom = IoCManager.Resolve<IRobustRandom>();
             var componentManager = IoCManager.Resolve<IComponentManager>();
+            var interactionSystem = entitySystemManager.GetEntitySystem<InteractionSystem>();
 
             var maxRange = MathHelper.Max(devastationRange, heavyImpactRange, lightImpactRange, 0f);
             //Entity damage calculation
             var entitiesAll = serverEntityManager.GetEntitiesInRange(coords, maxRange).ToList();
+            float baseForce = 1500.0f;
+            var selfPos = coords.ToWorld(mapManager).Position;
 
             foreach (var entity in entitiesAll)
             {
+                //Check if entity is deleted before using. This fix is already in a pending PR
                 if(entity.Deleted)
                     continue;
                 
@@ -64,6 +68,36 @@ namespace Content.Server.Explosions
                 }
                 //exAct.HandleExplosion(Owner, entity, severity);
                 exAct.HandleExplosion(null, entity, severity);
+            }
+
+            //Todo: Make the force scaling code reasonable
+            //Get entities again to move new entities that are the remnants of destroyed objects too
+            //The times 3 on the range is just BS to make the effect more obvious in testing.
+            entitiesAll = serverEntityManager.GetEntitiesInRange(coords, maxRange * 3).ToList();
+            foreach (var entity in entitiesAll)
+            {
+                //Check if entity is deleted before using. This fix is already in a pending PR
+                if (entity.Deleted)
+                    continue;
+                //Todo: Apply force to grids?
+                //Apply force to entities with PhysicsComponent
+                if (!entity.TryGetComponent(out PhysicsComponent phys))
+                    continue;
+
+                //The scaling code is trash that I threw together for testing the effect
+                var compPos = phys.Owner.Transform.WorldPosition;
+                var delta = selfPos - compPos;
+                var distance = delta.LengthSquared;
+                if (distance > 15.0f)
+                    continue;
+
+                var effect = 1 / (1 + 0.2f * (distance * 0.3f));
+                if (effect > 0.01f)
+                {
+                    //var strength = -delta.Normalized * effect;
+                    var instantaneousAcceleration = -1.0f * (baseForce / phys.Mass) * effect;
+                    phys.LinearVelocity += delta.Normalized * instantaneousAcceleration;
+                }
             }
 
             //Tile damage calculation mockup
@@ -124,7 +158,7 @@ namespace Content.Server.Explosions
 
             var playerManager = IoCManager.Resolve<IPlayerManager>();
             //var selfPos = Owner.Transform.WorldPosition; //vec2
-            var selfPos = coords.ToWorld(mapManager).Position;
+            IPlayerSession somePlayer = null;
             foreach (var player in playerManager.GetAllPlayers())
             {
                 if (player.AttachedEntity == null
@@ -133,6 +167,8 @@ namespace Content.Server.Explosions
                 {
                     continue;
                 }
+
+                somePlayer = player;
 
                 var playerPos = player.AttachedEntity.Transform.WorldPosition;
                 var delta = selfPos - playerPos;
@@ -147,22 +183,42 @@ namespace Content.Server.Explosions
             }
 
             //Throw nearby objects
-            float baseForce = 25.0f;
-            var physicsComponents = componentManager.GetAllComponents<PhysicsComponent>();
-            foreach (var comp in physicsComponents)
-            {
-                var compPos = comp.Owner.Transform.WorldPosition;
-                var delta = selfPos - compPos;
-                var distance = delta.LengthSquared;
+            //var physicsComponents = componentManager.GetAllComponents<PhysicsComponent>();
+            //foreach (var comp in physicsComponents)
+            //{
+            //    var compPos = comp.Owner.Transform.WorldPosition;
+            //    var delta = selfPos - compPos;
+            //    var distance = delta.LengthSquared;
+            //    if(distance > 6.0f)
+            //        continue;
 
-                var effect = 1 / (1 + 0.2f * distance);
-                if (effect > 0.01f)
-                {
-                    //var strength = -delta.Normalized * effect;
-                    var instantaneousAcceleration = (baseForce / comp.Mass) * effect;
-                    comp.LinearVelocity += delta.Normalized * instantaneousAcceleration;
-                }
-            }
+            //    var effect = 1 / (1 + 0.2f * distance);
+            //    if (effect > 0.01f)
+            //    {
+            //        //var strength = -delta.Normalized * effect;
+            //        var instantaneousAcceleration = -1.0f * (baseForce / comp.Mass) * effect;
+            //        comp.LinearVelocity += delta.Normalized * instantaneousAcceleration;
+            //    }
+            //}
+
+            //float baseForce = 25.0f;
+            //var physicsComponents = componentManager.GetAllComponents<PhysicsComponent>();
+            //foreach (var entity in entitiesAll)
+            //{
+            //    var comp = entity;
+            //    var compPos = comp.Transform.WorldPosition;
+            //    var delta = selfPos - compPos;
+            //    var distance = delta.LengthSquared;
+
+            //    var effect = 1 / (1 + 0.2f * distance);
+            //    //if (effect > 0.01f)
+            //    {
+            //        //var strength = -delta.Normalized * effect;
+            //        //var instantaneousAcceleration = (baseForce / comp.Mass) * effect;
+            //        //comp.LinearVelocity += delta.Normalized * instantaneousAcceleration;
+            //        interactionSystem.ThrownInteraction(somePlayer.AttachedEntity, entity);
+            //    }
+            //}
         }
     }
 }
