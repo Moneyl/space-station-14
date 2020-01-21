@@ -3,6 +3,7 @@ using System.Linq;
 using Content.Server.GameObjects.Components.Mobs;
 using Content.Server.GameObjects.EntitySystems;
 using Content.Shared.Maps;
+using Robust.Server.GameObjects;
 using Robust.Server.GameObjects.EntitySystems;
 using Robust.Server.Interfaces.GameObjects;
 using Robust.Server.Interfaces.Player;
@@ -27,6 +28,7 @@ namespace Content.Server.Explosions
             var entitySystemManager = IoCManager.Resolve<IEntitySystemManager>();
             var mapManager = IoCManager.Resolve<IMapManager>();
             var robustRandom = IoCManager.Resolve<IRobustRandom>();
+            var componentManager = IoCManager.Resolve<IComponentManager>();
 
             var maxRange = MathHelper.Max(devastationRange, heavyImpactRange, lightImpactRange, 0f);
             //Entity damage calculation
@@ -34,6 +36,9 @@ namespace Content.Server.Explosions
 
             foreach (var entity in entitiesAll)
             {
+                if(entity.Deleted)
+                    continue;
+                
                 //if (entity == Owner)
                 //    continue;
                 if (!entity.Transform.IsMapTransform)
@@ -138,6 +143,24 @@ namespace Content.Server.Explosions
                 {
                     var kick = -delta.Normalized * effect;
                     recoil.Kick(kick);
+                }
+            }
+
+            //Throw nearby objects
+            float baseForce = 25.0f;
+            var physicsComponents = componentManager.GetAllComponents<PhysicsComponent>();
+            foreach (var comp in physicsComponents)
+            {
+                var compPos = comp.Owner.Transform.WorldPosition;
+                var delta = selfPos - compPos;
+                var distance = delta.LengthSquared;
+
+                var effect = 1 / (1 + 0.2f * distance);
+                if (effect > 0.01f)
+                {
+                    //var strength = -delta.Normalized * effect;
+                    var instantaneousAcceleration = (baseForce / comp.Mass) * effect;
+                    comp.LinearVelocity += delta.Normalized * instantaneousAcceleration;
                 }
             }
         }
