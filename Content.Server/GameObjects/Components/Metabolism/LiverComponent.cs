@@ -2,7 +2,7 @@
 using Content.Server.GameObjects.Components.Chemistry;
 using Content.Server.GameObjects.EntitySystems;
 using Content.Shared.Chemistry;
-using Content.Shared.GameObjects.Components.Metabolism;
+using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
@@ -10,11 +10,13 @@ using Robust.Shared.ViewVariables;
 
 namespace Content.Server.GameObjects.Components.Metabolism
 {
-    public class LiverComponent : SharedLiverComponent
+    public class LiverComponent : Component
     {
 #pragma warning disable 649
         [Dependency] private readonly IPrototypeManager _prototypeManager;
 #pragma warning restore 649
+
+        public override string Name => "Liver";
 
         [ViewVariables(VVAccess.ReadOnly)]
         private SolutionComponent _internalSolution;
@@ -42,9 +44,8 @@ namespace Content.Server.GameObjects.Components.Metabolism
         {
             // TODO: For now no partial transfers. Potentially change by design
             if (solution.TotalVolume + _internalSolution.CurrentVolume > _internalSolution.MaxVolume)
-            {
                 return false;
-            }
+
             _internalSolution.TryAddSolution(solution, false, true);
             return true;
         }

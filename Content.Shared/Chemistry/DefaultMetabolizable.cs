@@ -18,7 +18,7 @@ namespace Content.Shared.Chemistry
             serializer.DataField(ref _metabolismRate, "rate", 1);
         }
 
-        int IMetabolizable.Metabolize(IEntity solutionEntity, string reagentId, float tickTime)
+        int IMetabolizable.Metabolize(IEntity solutionEntity, string reagentId, float tickTime, bool injected)
         {
             int metabolismAmount = (int)Math.Round(MetabolismRate * tickTime);
             return metabolismAmount;

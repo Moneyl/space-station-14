@@ -11,8 +11,10 @@
     - right
   - type: Hunger
   - type: Thirst
+
   # Organs
   - type: Stomach
+  - type: Liver
 
   - type: Inventory
   - type: Constructor
