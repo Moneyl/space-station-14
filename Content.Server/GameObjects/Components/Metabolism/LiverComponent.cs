@@ -10,6 +10,7 @@ using Robust.Shared.ViewVariables;
 
 namespace Content.Server.GameObjects.Components.Metabolism
 {
+    [RegisterComponent]
     public class LiverComponent : Component
     {
 #pragma warning disable 649
@@ -24,6 +25,8 @@ namespace Content.Server.GameObjects.Components.Metabolism
         //Used to track changes to reagent amounts during metabolism
         private readonly Dictionary<string, int> _reagentDeltas = new Dictionary<string, int>();
 
+        public int EmptyVolume => _internalSolution.EmptyVolume;
+
         public override void ExposeData(ObjectSerializer serializer)
         {
             base.ExposeData(serializer);
@@ -36,6 +39,7 @@ namespace Content.Server.GameObjects.Components.Metabolism
             //Doesn't use Owner.AddComponent<>() to avoid cross-contamination (e.g. with blood or whatever they holds other solutions)
             _internalSolution = new SolutionComponent();
             _internalSolution.InitializeFromPrototype();
+            _internalSolution.Init();
             _internalSolution.MaxVolume = _initialMaxVolume;
             _internalSolution.Owner = Owner; //Manually set owner to avoid crash when VV'ing this
         }

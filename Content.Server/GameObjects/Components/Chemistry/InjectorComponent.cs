@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Reflection.PortableExecutable;
+using Content.Server.GameObjects.Components.Metabolism;
 using Content.Server.GameObjects.EntitySystems;
 using Content.Server.Interfaces;
 using Content.Shared.Chemistry;
@@ -87,24 +89,33 @@ namespace Content.Server.GameObjects.Components.Chemistry
 
         void IAfterAttack.AfterAttack(AfterAttackEventArgs eventArgs)
         {
-            if(eventArgs.Attacked == null)
+            if (eventArgs.Attacked == null)
                 return;
             //Todo: Injection behavior
             //Check if attack entity has solutionComp
             //Check if has right SolutionCaps for injection
             //Inject or draw if space available in injector / target
             var targetEntity = eventArgs.Attacked;
-            if(_internalContents == null)
+            if (_internalContents == null)
                 return;
             if (!_internalContents.Injector) //Todo: Why even have SolutionCaps if they're all gonna be hid behind bools? Network perf?
                 return;
-            if (!targetEntity.TryGetComponent<SolutionComponent>(out var targetSolution) || !targetSolution.Injectable)
-                return;
+            if (targetEntity.TryGetComponent<SolutionComponent>(out var targetSolution) && targetSolution.Injectable)
+            {
+                if (_toggleState == InjectorToggleMode.Inject)
+                    TryInject(targetSolution, eventArgs.User);
+                else if (_toggleState == InjectorToggleMode.Draw)
+                    TryDraw(targetSolution, eventArgs.User);
+            }
+            else
+            {
+                if (!targetEntity.TryGetComponent<LiverComponent>(out var liver))
+                    return;
+                if (_toggleState == InjectorToggleMode.Inject)
+                    TryInjectIntoLiver(liver, eventArgs.User); //Todo: Check liver sol caps
+            }
+            //Todo: Add injection into LiverComponent/Bloodstream
 
-            if (_toggleState == InjectorToggleMode.Inject)
-                TryInject(targetSolution, eventArgs.User);
-            else if (_toggleState == InjectorToggleMode.Draw)
-                TryDraw(targetSolution, eventArgs.User);
         }
 
         //Todo: Make injector base prototype since there will be autoinjectors
@@ -120,12 +131,40 @@ namespace Content.Server.GameObjects.Components.Chemistry
             return true;
         }
 
+        private void TryInjectIntoLiver(LiverComponent targetLiver, IEntity user)
+        {
+            //Todo: Maybe have popup saying what state it is
+            //if(!targetSolution.Injectable)
+            //    return;
+            if (_internalContents.CurrentVolume == 0)
+                return;
+
+            //Get transfer amount. May be smaller than _transferAmount if not enough room
+            int realTransferAmount = Math.Min(_transferAmount, targetLiver.EmptyVolume);
+            if (realTransferAmount <= 0) //Todo: Special message if container is full
+            {
+                _notifyManager.PopupMessage(Owner.Transform.GridPosition, user,
+                    _localizationManager.GetString("Container full."));
+                return;
+            }
+
+            //Move units from attackSolution to targetSolution
+            var removedSolution = _internalContents.SplitSolution(realTransferAmount);
+            //var removedSolution = targetSolution.SplitSolution(realTransferAmount);
+            if (!targetLiver.TryTransferSolution(removedSolution))
+                return;
+
+            _notifyManager.PopupMessage(Owner.Transform.GridPosition, user,
+                _localizationManager.GetString("Injected {0}u", removedSolution.TotalVolume));
+            Dirty();
+        }
+
         private void TryInject(SolutionComponent targetSolution, IEntity user)
         {
             //Todo: Maybe have popup saying what state it is
             //if(!targetSolution.Injectable)
             //    return;
-            if(_internalContents.CurrentVolume == 0)
+            if (_internalContents.CurrentVolume == 0)
                 return;
 
             //Get transfer amount. May be smaller than _transferAmount if not enough room
@@ -153,7 +192,7 @@ namespace Content.Server.GameObjects.Components.Chemistry
             //Todo: Maybe have popup saying what state it is
             //if(!targetSolution.Injectable) //Todo: Figure out what flags should be used for drawing. Maybe another one
             //    return;
-            if(_internalContents.EmptyVolume == 0)
+            if (_internalContents.EmptyVolume == 0)
                 return;
 
             //Get transfer amount. May be smaller than _transferAmount if not enough room
