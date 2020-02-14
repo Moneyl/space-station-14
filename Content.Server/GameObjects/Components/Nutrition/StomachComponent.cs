@@ -60,7 +60,7 @@ namespace Content.Server.GameObjects.Components.Nutrition
         /// Loops through each reagent in _stomachContents, and calls the IMetabolizable for each of them./>
         /// </summary>
         /// <param name="tickTime">The time since the last metabolism tick in seconds.</param>
-        public void Metabolize(float tickTime)
+        private void Metabolize(float tickTime)
         {
             if (_stomachContents.CurrentVolume == 0)
                 return;

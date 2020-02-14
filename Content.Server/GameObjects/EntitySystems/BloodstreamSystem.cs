@@ -10,12 +10,12 @@ using Robust.Shared.GameObjects.Systems;
 namespace Content.Server.GameObjects.EntitySystems
 {
     [UsedImplicitly]
-    public class LiverSystem : EntitySystem
+    public class BloodstreamSystem : EntitySystem
     {
         private float _accumulatedFrameTime;
         public override void Initialize()
         {
-            EntityQuery = new TypeEntityQuery(typeof(LiverComponent));
+            EntityQuery = new TypeEntityQuery(typeof(BloodstreamComponent));
         }
 
         public override void Update(float frameTime)

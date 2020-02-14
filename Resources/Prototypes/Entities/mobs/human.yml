@@ -14,7 +14,7 @@
 
   # Organs
   - type: Stomach
-  - type: Liver
+  - type: Bloodstream
 
   - type: Inventory
   - type: Constructor

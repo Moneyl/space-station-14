@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Content.Client.UserInterface;
+﻿using Content.Client.UserInterface;
 using Content.Client.Utility;
 using Content.Shared.GameObjects.Components.Chemistry;
 using Robust.Shared.Timing;
@@ -23,6 +20,7 @@ namespace Content.Client.GameObjects.Components.Chemistry
         [ViewVariables(VVAccess.ReadWrite)] private bool _uiUpdateNeeded;
 
         public Control MakeControl() => new StatusControl(this);
+        public void DestroyControl(Control control) { }
 
         public override void HandleComponentState(ComponentState curState, ComponentState nextState)
         {

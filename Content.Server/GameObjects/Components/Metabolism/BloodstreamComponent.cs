@@ -11,17 +11,18 @@ using Robust.Shared.ViewVariables;
 namespace Content.Server.GameObjects.Components.Metabolism
 {
     [RegisterComponent]
-    public class LiverComponent : Component
+    public class BloodstreamComponent : Component
     {
 #pragma warning disable 649
         [Dependency] private readonly IPrototypeManager _prototypeManager;
 #pragma warning restore 649
 
-        public override string Name => "Liver";
+        public override string Name => "Bloodstream";
 
         [ViewVariables(VVAccess.ReadOnly)]
         private SolutionComponent _internalSolution;
         private int _initialMaxVolume;
+
         //Used to track changes to reagent amounts during metabolism
         private readonly Dictionary<string, int> _reagentDeltas = new Dictionary<string, int>();
 

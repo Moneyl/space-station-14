@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Reflection.PortableExecutable;
 using Content.Server.GameObjects.Components.Metabolism;
 using Content.Server.GameObjects.EntitySystems;
 using Content.Server.Interfaces;
@@ -109,10 +108,10 @@ namespace Content.Server.GameObjects.Components.Chemistry
             }
             else
             {
-                if (!targetEntity.TryGetComponent<LiverComponent>(out var liver))
+                if (!targetEntity.TryGetComponent<BloodstreamComponent>(out var bloodstream))
                     return;
                 if (_toggleState == InjectorToggleMode.Inject)
-                    TryInjectIntoLiver(liver, eventArgs.User); //Todo: Check liver sol caps
+                    TryInjectIntoLiver(bloodstream, eventArgs.User); //Todo: Check liver sol caps
             }
             //Todo: Add injection into LiverComponent/Bloodstream
 
@@ -131,7 +130,7 @@ namespace Content.Server.GameObjects.Components.Chemistry
             return true;
         }
 
-        private void TryInjectIntoLiver(LiverComponent targetLiver, IEntity user)
+        private void TryInjectIntoLiver(BloodstreamComponent targetBloodstream, IEntity user)
         {
             //Todo: Maybe have popup saying what state it is
             //if(!targetSolution.Injectable)
@@ -140,7 +139,7 @@ namespace Content.Server.GameObjects.Components.Chemistry
                 return;
 
             //Get transfer amount. May be smaller than _transferAmount if not enough room
-            int realTransferAmount = Math.Min(_transferAmount, targetLiver.EmptyVolume);
+            int realTransferAmount = Math.Min(_transferAmount, targetBloodstream.EmptyVolume);
             if (realTransferAmount <= 0) //Todo: Special message if container is full
             {
                 _notifyManager.PopupMessage(Owner.Transform.GridPosition, user,
@@ -151,7 +150,7 @@ namespace Content.Server.GameObjects.Components.Chemistry
             //Move units from attackSolution to targetSolution
             var removedSolution = _internalContents.SplitSolution(realTransferAmount);
             //var removedSolution = targetSolution.SplitSolution(realTransferAmount);
-            if (!targetLiver.TryTransferSolution(removedSolution))
+            if (!targetBloodstream.TryTransferSolution(removedSolution))
                 return;
 
             _notifyManager.PopupMessage(Owner.Transform.GridPosition, user,
