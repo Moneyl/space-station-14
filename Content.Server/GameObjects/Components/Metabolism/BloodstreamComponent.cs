@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿using System.Linq;
 using Content.Server.GameObjects.Components.Chemistry;
 using Content.Server.GameObjects.EntitySystems;
 using Content.Shared.Chemistry;
@@ -10,6 +10,11 @@ using Robust.Shared.ViewVariables;
 
 namespace Content.Server.GameObjects.Components.Metabolism
 {
+    /// <summary>
+    /// Handles all metabolism for mobs. All delivery methods eventually bring reagents
+    /// to the bloodstream. For example, injectors put reagents directly into the bloodstream,
+    /// and the stomach does with some delay.
+    /// </summary>
     [RegisterComponent]
     public class BloodstreamComponent : Component
     {
@@ -19,25 +24,34 @@ namespace Content.Server.GameObjects.Components.Metabolism
 
         public override string Name => "Bloodstream";
 
-        [ViewVariables(VVAccess.ReadOnly)]
+        /// <summary>
+        /// Internal solution for reagent storage
+        /// </summary>
+        [ViewVariables]
         private SolutionComponent _internalSolution;
+
+        /// <summary>
+        /// Max volume of internal solution storage
+        /// </summary>
+        [ViewVariables]
         private int _initialMaxVolume;
 
-        //Used to track changes to reagent amounts during metabolism
-        private readonly Dictionary<string, int> _reagentDeltas = new Dictionary<string, int>();
-
+        /// <summary>
+        /// Empty volume of internal solution
+        /// </summary>
         public int EmptyVolume => _internalSolution.EmptyVolume;
 
         public override void ExposeData(ObjectSerializer serializer)
         {
             base.ExposeData(serializer);
-            serializer.DataField(ref _initialMaxVolume, "max_volume", 20);
+            serializer.DataField(ref _initialMaxVolume, "max_volume", 500);
         }
 
         public override void Initialize()
         {
             base.Initialize();
-            //Doesn't use Owner.AddComponent<>() to avoid cross-contamination (e.g. with blood or whatever they holds other solutions)
+
+            //Create and setup internal solution storage
             _internalSolution = new SolutionComponent();
             _internalSolution.InitializeFromPrototype();
             _internalSolution.Init();
@@ -45,11 +59,18 @@ namespace Content.Server.GameObjects.Components.Metabolism
             _internalSolution.Owner = Owner; //Manually set owner to avoid crash when VV'ing this
         }
 
+        /// <summary>
+        /// Attempt to transfer provided solution to internal solution. Only supports complete transfers
+        /// </summary>
+        /// <param name="solution">Solution to be transferred</param>
+        /// <returns>Whether or not transfer was a success</returns>
         public bool TryTransferSolution(Solution solution)
         {
-            // TODO: For now no partial transfers. Potentially change by design
+            //For now doesn't support partial transfers
             if (solution.TotalVolume + _internalSolution.CurrentVolume > _internalSolution.MaxVolume)
+            {
                 return false;
+            }
 
             _internalSolution.TryAddSolution(solution, false, true);
             return true;
@@ -59,34 +80,32 @@ namespace Content.Server.GameObjects.Components.Metabolism
         /// Loops through each reagent in _internalSolution, and calls the IMetabolizable for each of them./>
         /// </summary>
         /// <param name="tickTime">The time since the last metabolism tick in seconds.</param>
-        public void Metabolize(float tickTime)
+        private void Metabolize(float tickTime)
         {
             if (_internalSolution.CurrentVolume == 0)
-                return;
-
-            //Run metabolism for each reagent, track quantity changes
-            _reagentDeltas.Clear();
-            foreach (var reagent in _internalSolution.ReagentList)
             {
-                if (!_prototypeManager.TryIndex(reagent.ReagentId, out ReagentPrototype proto))
-                    continue;
-
-                foreach (var metabolizable in proto.Metabolism)
-                {
-                    _reagentDeltas[reagent.ReagentId] = metabolizable.Metabolize(Owner, reagent.ReagentId, tickTime);
-                }
+                return;
             }
 
-            //Apply changes to quantity afterwards. Can't change the reagent quantities while the iterating the
-            //list of reagents, because that would invalidate the iterator and throw an exception.
-            foreach (var reagentDelta in _reagentDeltas)
+            //Run metabolism for each reagent, remove metabolized reagents
+            foreach (var reagent in _internalSolution.ReagentList.ToList()) //Using ToList here lets us edit reagents while iterating
             {
-                _internalSolution.TryRemoveReagent(reagentDelta.Key, reagentDelta.Value);
+                if (!_prototypeManager.TryIndex(reagent.ReagentId, out ReagentPrototype proto))
+                {
+                    continue;
+                }
+
+                //Run metabolism code for each reagent
+                foreach (var metabolizable in proto.Metabolism)
+                {
+                    int reagentDelta = metabolizable.Metabolize(Owner, reagent.ReagentId, tickTime);
+                    _internalSolution.TryRemoveReagent(reagent.ReagentId, reagentDelta);
+                }
             }
         }
 
         /// <summary>
-        /// Triggers metabolism of the reagents inside _internalSolution. Called by <see cref="StomachSystem"/>
+        /// Triggers metabolism of the reagents inside _internalSolution. Called by <see cref="BloodstreamSystem"/>
         /// </summary>
         /// <param name="tickTime">The time since the last metabolism tick in seconds.</param>
         public void OnUpdate(float tickTime)

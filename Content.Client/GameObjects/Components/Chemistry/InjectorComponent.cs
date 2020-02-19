@@ -10,28 +10,37 @@ using Robust.Shared.ViewVariables;
 
 namespace Content.Client.GameObjects.Components.Chemistry
 {
+    /// <summary>
+    /// Client behavior for injectors & syringes. Used for item status on injectors
+    /// </summary>
     [RegisterComponent]
     public class InjectorComponent : SharedInjectorComponent, IItemStatus
     {
-        [ViewVariables] public int CurrentVolume { get; private set; }
-        [ViewVariables] public int TotalVolume { get; private set; }
-        [ViewVariables] public InjectorToggleMode CurrentMode { get; private set; }
-
+        [ViewVariables] private int CurrentVolume { get; set; }
+        [ViewVariables] private int TotalVolume { get; set; }
+        [ViewVariables] private InjectorToggleMode CurrentMode { get; set; }
         [ViewVariables(VVAccess.ReadWrite)] private bool _uiUpdateNeeded;
 
-        public Control MakeControl() => new StatusControl(this);
-        public void DestroyControl(Control control) { }
+        //Add/remove item status code
+        Control IItemStatus.MakeControl() => new StatusControl(this);
+        void IItemStatus.DestroyControl(Control control) { }
 
+        //Handle net updates
         public override void HandleComponentState(ComponentState curState, ComponentState nextState)
         {
             var cast = (InjectorComponentState)curState;
-
-            CurrentVolume = cast.CurrentVolume;
-            TotalVolume = cast.TotalVolume;
-            CurrentMode = cast.CurrentMode;
-            _uiUpdateNeeded = true;
+            if (cast != null)
+            {
+                CurrentVolume = cast.CurrentVolume;
+                TotalVolume = cast.TotalVolume;
+                CurrentMode = cast.CurrentMode;
+                _uiUpdateNeeded = true;
+            }
         }
 
+        /// <summary>
+        /// Item status control for injectors
+        /// </summary>
         private sealed class StatusControl : Control
         {
             private readonly InjectorComponent _parent;
@@ -49,7 +58,6 @@ namespace Content.Client.GameObjects.Components.Chemistry
             protected override void Update(FrameEventArgs args)
             {
                 base.Update(args);
-
                 if (!_parent._uiUpdateNeeded)
                 {
                     return;
@@ -57,6 +65,7 @@ namespace Content.Client.GameObjects.Components.Chemistry
 
                 _parent._uiUpdateNeeded = false;
 
+                //Update current volume and injector state
                 _label.SetMarkup(Loc.GetString("Volume: [color=white]{0}/{1}[/color] | [color=white]{2}[/color]",
                     _parent.CurrentVolume, _parent.TotalVolume, _parent.CurrentMode.ToString()));
             }

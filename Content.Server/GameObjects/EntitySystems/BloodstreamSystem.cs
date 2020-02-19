@@ -1,14 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Content.Server.GameObjects.Components.Metabolism;
-using Content.Server.GameObjects.Components.Nutrition;
+﻿using Content.Server.GameObjects.Components.Metabolism;
 using JetBrains.Annotations;
 using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Systems;
 
 namespace Content.Server.GameObjects.EntitySystems
 {
+    /// <summary>
+    /// Triggers metabolism updates for <see cref="BloodstreamComponent"/>
+    /// </summary>
     [UsedImplicitly]
     public class BloodstreamSystem : EntitySystem
     {
@@ -20,17 +19,17 @@ namespace Content.Server.GameObjects.EntitySystems
 
         public override void Update(float frameTime)
         {
-            //_accumulatedFrameTime += frameTime;
-            //// TODO: Potential performance improvement (e.g. going through say 1/5th the entities every tick)
-            //if (_accumulatedFrameTime > 1.0f)
-            //{
-            //    foreach (var entity in RelevantEntities)
-            //    {
-            //        var comp = entity.GetComponent<StomachComponent>();
-            //        comp.OnUpdate(_accumulatedFrameTime);
-            //    }
-            //    _accumulatedFrameTime = 0.0f;
-            //}
+            //Trigger metabolism updates at most once per second
+            _accumulatedFrameTime += frameTime;
+            if (_accumulatedFrameTime > 1.0f)
+            {
+                foreach (var entity in RelevantEntities)
+                {
+                    var comp = entity.GetComponent<BloodstreamComponent>();
+                    comp.OnUpdate(_accumulatedFrameTime);
+                }
+                _accumulatedFrameTime = 0.0f;
+            }
         }
     }
 }

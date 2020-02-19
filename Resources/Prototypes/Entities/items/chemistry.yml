@@ -54,10 +54,8 @@
   components:
   - type: Sprite
     texture: Objects/Chemistry/chemicals.rsi/syringeproj.png
-    state: syringeproj
   - type: Icon
     texture: Objects/Chemistry/chemicals.rsi/syringeproj.png
-    state: syringeproj
   - type: Solution
     maxVol: 15
     caps: 19

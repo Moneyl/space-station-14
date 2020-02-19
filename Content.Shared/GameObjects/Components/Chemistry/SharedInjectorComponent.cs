@@ -4,11 +4,17 @@ using Robust.Shared.Serialization;
 
 namespace Content.Shared.GameObjects.Components.Chemistry
 {
+    /// <summary>
+    /// Shared class for injectors & syringes
+    /// </summary>
     public class SharedInjectorComponent : Component
     {
         public override string Name => "Injector";
         public sealed override uint? NetID => ContentNetIDs.REAGENT_INJECTOR;
 
+        /// <summary>
+        /// Component data used for net updates. Used by client for item status ui
+        /// </summary>
         [Serializable, NetSerializable]
         protected sealed class InjectorComponentState : ComponentState
         {
@@ -24,7 +30,7 @@ namespace Content.Shared.GameObjects.Components.Chemistry
             }
         }
 
-        public enum InjectorToggleMode
+        protected enum InjectorToggleMode
         {
             Inject,
             Draw
